@@ -1,7 +1,7 @@
 package com.yaerin.sqlite.ui;
 
-import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Canvas;
@@ -9,7 +9,9 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -32,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-public class TableActivity extends Activity {
+public class TableActivity extends AppCompatActivity {
 
     private SQLiteDatabase mDatabase;
     private String mTableName;
@@ -49,7 +51,7 @@ public class TableActivity extends Activity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_table);
+        setContentView(R.layout.sql_editor_table);
         mProgressBar = findViewById(R.id.progress);
         mTable = findViewById(R.id.table);
         mTable.setZoom(true, 2.0f, 0.5f);
@@ -94,7 +96,7 @@ public class TableActivity extends Activity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.table, menu);
+        getMenuInflater().inflate(R.menu.sql_editor_table, menu);
         return true;
     }
 
@@ -109,54 +111,46 @@ public class TableActivity extends Activity {
         MenuItem save = menu.findItem(R.id.action_save);
 
         undo.setEnabled(enabledUndo);
-        undo.setIcon(enabledUndo ? R.drawable.ic_undo_white_24dp : R.drawable.ic_undo_gray_24dp);
+        undo.setIcon(enabledUndo ? R.drawable.sql_editor_ic_undo_white_24dp : R.drawable.sql_editor_ic_undo_gray_24dp);
         redo.setEnabled(enabledRedo);
-        redo.setIcon(enabledRedo ? R.drawable.ic_redo_white_24dp : R.drawable.ic_redo_gray_24dp);
+        redo.setIcon(enabledRedo ? R.drawable.sql_editor_ic_redo_white_24dp : R.drawable.sql_editor_ic_redo_gray_24dp);
         save.setEnabled(enabledSave);
-        save.setIcon(enabledSave ? R.drawable.ic_save_white_24dp : R.drawable.ic_save_gray_24dp);
+        save.setIcon(enabledSave ? R.drawable.sql_editor_ic_save_white_24dp : R.drawable.sql_editor_ic_save_gray_24dp);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_undo: {
-                if (mUndoList.size() > 0 && mUndoVList.size() > 0) {
-                    String s = mUndoList.get(mUndoList.size() - 1);
-                    mRedoList.add(s);
-                    mUndoList.remove(s);
-                    Cell c = mUndoVList.get(mUndoVList.size() - 1);
-                    mRedoVList.add(c);
-                    mUndoVList.remove(c);
-                    mTableData.getData()[c.col][c.row] = c.oldVal;
-                    mTable.invalidate();
-                }
-                invalidateOptionsMenu();
-                break;
+        int i = item.getItemId();
+        if (i == R.id.action_undo) {
+            if (mUndoList.size() > 0 && mUndoVList.size() > 0) {
+                String s = mUndoList.get(mUndoList.size() - 1);
+                mRedoList.add(s);
+                mUndoList.remove(s);
+                Cell c = mUndoVList.get(mUndoVList.size() - 1);
+                mRedoVList.add(c);
+                mUndoVList.remove(c);
+                mTableData.getData()[c.col][c.row] = c.oldVal;
+                mTable.invalidate();
             }
-
-            case R.id.action_redo: {
-                if (mRedoList.size() > 0) {
-                    String s = mRedoList.get(mRedoList.size() - 1);
-                    mUndoList.add(s);
-                    mRedoList.remove(s);
-                    Cell c = mRedoVList.get(mRedoVList.size() - 1);
-                    mUndoVList.add(c);
-                    mRedoVList.remove(c);
-                    mTableData.getData()[c.col][c.row] = c.newVal;
-                    mTable.invalidate();
-                }
-                invalidateOptionsMenu();
-                break;
+            invalidateOptionsMenu();
+        } else if (i == R.id.action_redo) {
+            if (mRedoList.size() > 0) {
+                String s = mRedoList.get(mRedoList.size() - 1);
+                mUndoList.add(s);
+                mRedoList.remove(s);
+                Cell c = mRedoVList.get(mRedoVList.size() - 1);
+                mUndoVList.add(c);
+                mRedoVList.remove(c);
+                mTableData.getData()[c.col][c.row] = c.newVal;
+                mTable.invalidate();
             }
-
-            case R.id.action_save: {
-                try {
-                    execSQLs();
-                } catch (Exception e) {
-                    Toast.makeText(this, e.toString(), Toast.LENGTH_LONG).show();
-                }
-                break;
+            invalidateOptionsMenu();
+        } else if (i == R.id.action_save) {
+            try {
+                execSQLs();
+            } catch (Exception e) {
+                Toast.makeText(this, e.toString(), Toast.LENGTH_LONG).show();
             }
         }
         return true;
@@ -192,17 +186,20 @@ public class TableActivity extends Activity {
     }
 
     private String[][] buildArray() {
+        long time = System.nanoTime();
         Cursor cursor = mDatabase.rawQuery(
                 "SELECT * FROM \"" + mTableName + "\"", null);
         Cursor c = mDatabase.rawQuery(
                 "PRAGMA table_info(\"" + mTableName + "\")", null);
 
+        Log.e("xx", "query" + (System.nanoTime() - time));
         if (cursor.getCount() == 0) {
             cursor.close();
             c.close();
             return null;
         }
 
+        time = System.nanoTime();
         String[][] data = new String[cursor.getColumnCount()][cursor.getCount()];
         for (int i = 0; i < cursor.getColumnCount(); i++) {
             c.moveToPosition(i);
@@ -216,6 +213,8 @@ public class TableActivity extends Activity {
             }
         }
 
+
+        Log.e("xx", "add" + (System.nanoTime() - time));
         cursor.close();
         c.close();
         return data;
@@ -248,7 +247,7 @@ public class TableActivity extends Activity {
         String primaryKey = getPrimaryKey(sql);
 
         if (primaryKey == null) {
-            Toast.makeText(this, R.string.err_primary_key, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.sql_editor_err_primary_key, Toast.LENGTH_LONG).show();
             return null;
         }
 
@@ -276,63 +275,81 @@ public class TableActivity extends Activity {
     private void init() {
         mProgressBar.setVisibility(View.VISIBLE);
         mColumnNames = getColumnNames();
-        new Thread(() -> {
-            final String[][][] array = {buildArray()};
-            runOnUiThread(() -> {
-                if (array[0] == null) {
-                    array[0] = new String[mColumnNames.length][0];
-                }
-                mTableData =
-                        ArrayTableData.create(null, mColumnNames, array[0], new TextDrawFormat<>());
-                mTableData.setOnItemClickListener(new OnItemClickListener());
-                mTable.setTableData(mTableData);
-                mProgressBar.setVisibility(View.GONE);
+        new Thread() {
+            @Override
+            public void run() {
+                super.run();
+                final String[][][] array = {buildArray()};
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (array[0] == null) {
+                            array[0] = new String[mColumnNames.length][0];
+                        }
+                        mTableData =
+                                ArrayTableData.create(null, mColumnNames, array[0], new TextDrawFormat<String>());
+                        mTableData.setOnItemClickListener(new OnItemClickListener());
+                        mTable.setTableData(mTableData);
+                        mProgressBar.setVisibility(View.GONE);
+
+                    }
+
             });
-        }).start();
+            }
+        }.start();
     }
 
     private class OnItemClickListener implements TableData.OnItemClickListener {
 
         @Override
-        public void onClick(Column column, String value, Object o, int col, int row) {
+        public void onClick(Column column, final String value, Object o, final int col, final int row) {
             Cursor cursor = mDatabase.rawQuery(
                     "PRAGMA table_info(\"" + mTableName + "\")", null);
             cursor.moveToPosition(col);
-            String name = cursor.getString(cursor.getColumnIndex("name"));
+            final String name = cursor.getString(cursor.getColumnIndex("name"));
             String type = cursor.getString(cursor.getColumnIndex("type"));
-            boolean notNull = cursor.getInt(cursor.getColumnIndex("notnull")) == 1;
+            final boolean notNull = cursor.getInt(cursor.getColumnIndex("notnull")) == 1;
             cursor.close();
 
             if (type.equals("BLOB")) {
-                Toast.makeText(TableActivity.this, R.string.err_blob_data, Toast.LENGTH_SHORT).show();
+                Toast.makeText(TableActivity.this, R.string.sql_editor_err_blob_data, Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            View view = View.inflate(TableActivity.this, R.layout.dialog_edit, null);
-            EditText editText = view.findViewById(R.id.edit_text);
+            View view = View.inflate(TableActivity.this, R.layout.sql_editor_dialog_edit, null);
+            final EditText editText = view.findViewById(R.id.edit_text);
             editText.setText(value);
             editText.requestFocus();
             editText.selectAll();
             new AlertDialog.Builder(TableActivity.this)
-                    .setTitle(getString(R.string.title_edit,
+                    .setTitle(getString(R.string.sql_editor_title_edit,
                             name, type + (notNull ? " NOT NULL" : "")))
                     .setView(view)
-                    .setNegativeButton(R.string.action_cancel, (dialog, which) -> dialog.dismiss())
-                    .setPositiveButton(R.string.action_ok, (dialog, which) -> {
-                        String newValue = editText.getText().toString();
-                        if (TextUtils.isEmpty(newValue) && notNull) {
-                            Toast.makeText(TableActivity.this,
-                                    "NOT NULL", Toast.LENGTH_SHORT).show();
-                        } else if (!newValue.equals(value)) {
-                            String sql = buildSQL(col, row, name, newValue);
-                            if (sql != null) {
-                                mUndoList.add(sql);
-                                if (!mRedoList.isEmpty()) {
-                                    mRedoList.clear();
+                    .setNegativeButton(R.string.sql_editor_action_cancel, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                        }
+                    })
+                    .setPositiveButton(R.string.sql_editor_action_ok, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            String newValue = editText.getText().toString();
+                            if (TextUtils.isEmpty(newValue) && notNull) {
+                                Toast.makeText(TableActivity.this,
+                                        "NOT NULL", Toast.LENGTH_SHORT).show();
+                            } else if (!newValue.equals(value)) {
+                                String sql = buildSQL(col, row, name, newValue);
+                                if (sql != null) {
+                                    mUndoList.add(sql);
+                                    if (!mRedoList.isEmpty()) {
+                                        mRedoList.clear();
+                                    }
+                                    invalidateOptionsMenu();
                                 }
-                                invalidateOptionsMenu();
                             }
                         }
+
                     })
                     .create()
                     .show();

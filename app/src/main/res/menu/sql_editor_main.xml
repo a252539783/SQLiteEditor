@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
     <!--<item
         android:id="@+id/action_add"
         android:icon="@drawable/ic_add_white_24dp"
@@ -7,7 +8,7 @@
         android:title="@string/action_create_table" />-->
     <item
         android:id="@+id/action_exec"
-        android:icon="@drawable/ic_console_line_white_24dp"
-        android:showAsAction="ifRoom"
-        android:title="@string/action_exec_sql" />
+        android:icon="@drawable/sql_editor_ic_console_line_white_24dp"
+        android:title="@string/sql_editor_action_exec_sql"
+        app:showAsAction="ifRoom" />
 </menu>

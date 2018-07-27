@@ -1,16 +1,11 @@
-import java.text.SimpleDateFormat
-
-apply plugin: 'com.android.application'
+apply plugin: 'com.android.library'
 
 android {
     compileSdkVersion 27
     buildToolsVersion '27.0.3'
     defaultConfig {
-        applicationId "com.yaerin.sqlite"
-        minSdkVersion 21
+        minSdkVersion 14
         targetSdkVersion 27
-        versionCode getMyVersionCode()
-        versionName getMyVersionName()
     }
     buildTypes {
         release {
@@ -19,8 +14,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_1_7
+        targetCompatibility JavaVersion.VERSION_1_7
     }
 }
 
@@ -28,12 +23,20 @@ dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'com.android.support:support-annotations:27.1.1'
     implementation 'com.github.huangyanbin:SmartTable:2.2.0'
+    compileOnly 'com.android.support:appcompat-v7:27.1.1'
 }
 
-static def getMyVersionCode() {
-    return Integer.parseInt(new SimpleDateFormat("yyMMdd").format(new Date()))
-}
+apply plugin: 'maven'
 
-static def getMyVersionName() {
-    return "1.0.3." + "git describe --always".execute().getText().trim()
+group 'com.yaerin'
+version '1.0.1'
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: uri('/Users/liquanfei/repo'))
+            pom.groupId = "com.yaerin"
+            pom.artifactId = "sqliteeditor"
+            pom.version = version
+        }
+    }
 }
